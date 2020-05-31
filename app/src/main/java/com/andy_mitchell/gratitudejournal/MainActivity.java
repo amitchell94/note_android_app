@@ -11,6 +11,10 @@ import android.widget.Toast;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 import androidx.annotation.NonNull;
@@ -27,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
     public static final int ADD_NOTE_REQUEST = 1;
     public static final int EDIT_NOTE_REQUEST = 2;
 
-    private NoteViewModel noteViewModel;
+    private JournalEntryViewModel journalEntryViewModel;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
         buttonAddNote.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, AddEditNoteActivity.class);
+                Intent intent = new Intent(MainActivity.this, AddEditJournalEntryActivity.class);
                 startActivityForResult(intent, ADD_NOTE_REQUEST);
             }
         });
@@ -48,14 +52,14 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setHasFixedSize(true);
 
-        final NoteAdapter adapter = new NoteAdapter();
+        final JournalEntryAdapter adapter = new JournalEntryAdapter();
         recyclerView.setAdapter(adapter);
 
-        noteViewModel = new ViewModelProvider.AndroidViewModelFactory(getApplication()).create(NoteViewModel.class);
-        noteViewModel.getAllNotes().observe(this, new Observer<List<Note>>() {
+        journalEntryViewModel = new ViewModelProvider.AndroidViewModelFactory(getApplication()).create(JournalEntryViewModel.class);
+        journalEntryViewModel.getAllJournalEntries().observe(this, new Observer<List<JournalEntry>>() {
             @Override
-            public void onChanged(List<Note> notes) {
-                adapter.submitList(notes);
+            public void onChanged(List<JournalEntry> journalEntries) {
+                adapter.submitList(journalEntries);
             }
         });
 
@@ -68,20 +72,18 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
-                noteViewModel.delete(adapter.getNoteAt(viewHolder.getAdapterPosition()));
-                Toast.makeText(MainActivity.this, "Note deleted", Toast.LENGTH_SHORT).show();
+                journalEntryViewModel.delete(adapter.getJournalEntryAt(viewHolder.getAdapterPosition()));
+                Toast.makeText(MainActivity.this, "JournalEntry deleted", Toast.LENGTH_SHORT).show();
             }
         }).attachToRecyclerView(recyclerView);
 
-        adapter.setOnItemClickListener(new NoteAdapter.OnItemClickListener() {
+        adapter.setOnItemClickListener(new JournalEntryAdapter.OnItemClickListener() {
             @Override
-            public void onItemClick(Note note) {
-                Intent intent = new Intent(MainActivity.this, AddEditNoteActivity.class);
+            public void onItemClick(JournalEntry journalEntry) {
+                Intent intent = new Intent(MainActivity.this, AddEditJournalEntryActivity.class);
 
-                intent.putExtra(AddEditNoteActivity.EXTRA_ID, note.getId());
-                intent.putExtra(AddEditNoteActivity.EXTRA_TITLE, note.getTitle());
-                intent.putExtra(AddEditNoteActivity.EXTRA_DESCRIPTION, note.getDescription());
-                intent.putExtra(AddEditNoteActivity.EXTRA_PRIORITY, note.getPriority());
+                intent.putExtra(AddEditJournalEntryActivity.EXTRA_ID, journalEntry.getId());
+                intent.putExtra(AddEditJournalEntryActivity.EXTRA_BODY, journalEntry.getBody());
 
                 startActivityForResult(intent, EDIT_NOTE_REQUEST);
             }
@@ -93,38 +95,40 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == ADD_NOTE_REQUEST && resultCode == RESULT_OK) {
-            String title = data.getStringExtra(AddEditNoteActivity.EXTRA_TITLE);
-            String description = data.getStringExtra(AddEditNoteActivity.EXTRA_DESCRIPTION);
-            int priority = data.getIntExtra(AddEditNoteActivity.EXTRA_PRIORITY, 1);
+            String body = data.getStringExtra(AddEditJournalEntryActivity.EXTRA_BODY);
 
-            Note note = new Note(title, description, priority);
+            JournalEntry journalEntry = new JournalEntry(body,Calendar.getInstance().getTime());
 
-            noteViewModel.insert(note);
+            journalEntryViewModel.insert(journalEntry);
 
-            Toast.makeText(this, "Note saved", Toast.LENGTH_SHORT);
+            Toast.makeText(this, "Journal entry saved", Toast.LENGTH_SHORT);
 
 
         } else if (requestCode == EDIT_NOTE_REQUEST && resultCode == RESULT_OK) {
-            int id = data.getIntExtra(AddEditNoteActivity.EXTRA_ID,-1);
+            int id = data.getIntExtra(AddEditJournalEntryActivity.EXTRA_ID,-1);
 
             if (id == -1) {
-                Toast.makeText(this, "Note couldn't be updated", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Journal entry couldn't be updated", Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            String title = data.getStringExtra(AddEditNoteActivity.EXTRA_TITLE);
-            String description = data.getStringExtra(AddEditNoteActivity.EXTRA_DESCRIPTION);
-            int priority = data.getIntExtra(AddEditNoteActivity.EXTRA_PRIORITY, 1);
+            String title = data.getStringExtra(AddEditJournalEntryActivity.EXTRA_BODY);
+            Date date = Calendar.getInstance().getTime();
+            try {
+                date = TimestampConverter.fromTimestamp(data.getStringExtra(AddEditJournalEntryActivity.EXTRA_DATE));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
-            Note note = new Note(title,description,priority);
-            note.setId(id);
+            JournalEntry journalEntry = new JournalEntry(title,date);
+            journalEntry.setId(id);
 
-            noteViewModel.update(note);
+            journalEntryViewModel.update(journalEntry);
 
-            Toast.makeText(this, "Note updated", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Journal Entry updated", Toast.LENGTH_SHORT).show();
 
         } else {
-            Toast.makeText(this, "Note not saved", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Journal Entry not saved", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -139,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.delete_all_notes:
-                noteViewModel.deleteAllNotes();
+                journalEntryViewModel.deleteAllEntries();
                 Toast.makeText(this, "All notes deleted", Toast.LENGTH_SHORT).show();
                 return true;
             default:

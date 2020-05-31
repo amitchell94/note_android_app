@@ -3,23 +3,29 @@ package com.andy_mitchell.gratitudejournal;
 import android.content.Context;
 import android.os.AsyncTask;
 
+import java.time.LocalDateTime;
+import java.time.temporal.Temporal;
+import java.time.temporal.TemporalAmount;
+import java.util.Calendar;
+import java.util.Date;
+
 import androidx.annotation.NonNull;
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
-@Database(entities = Note.class, version = 1)
-public abstract class NoteDatabase extends RoomDatabase {
+@Database(entities = JournalEntry.class, version = 1)
+public abstract class JournalEntryDatabase extends RoomDatabase {
 
-    private static NoteDatabase instance;
+    private static JournalEntryDatabase instance;
 
-    public abstract NoteDao noteDao();
+    public abstract JournalEntryDao journalEntryDao();
 
-    public static synchronized NoteDatabase getInstance(Context context) {
+    public static synchronized JournalEntryDatabase getInstance(Context context) {
         if (instance == null) {
             instance = Room.databaseBuilder(context.getApplicationContext(),
-                    NoteDatabase.class, "note_database")
+                    JournalEntryDatabase.class, "journal_database")
                     .fallbackToDestructiveMigration()
                     .addCallback(roomCallback)
                     .build();
@@ -37,17 +43,17 @@ public abstract class NoteDatabase extends RoomDatabase {
     };
 
     private static class PopulateDbAsyncTask extends AsyncTask<Void,Void,Void> {
-        private NoteDao noteDao;
+        private JournalEntryDao journalEntryDao;
 
-        private PopulateDbAsyncTask(NoteDatabase db) {
-            noteDao = db.noteDao();
+        private PopulateDbAsyncTask(JournalEntryDatabase db) {
+            journalEntryDao = db.journalEntryDao();
         }
 
         @Override
         protected Void doInBackground(Void... voids) {
-            noteDao.insert(new Note("title1","desc1",1));
-            noteDao.insert(new Note("title2","desc2",2));
-            noteDao.insert(new Note("title3","desc3",3));
+            journalEntryDao.insert(new JournalEntry("title1", Calendar.getInstance().getTime()));
+            journalEntryDao.insert(new JournalEntry("title2",Calendar.getInstance().getTime()));
+            journalEntryDao.insert(new JournalEntry("title3",Calendar.getInstance().getTime()));
             return null;
         }
     }
